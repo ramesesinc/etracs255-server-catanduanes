@@ -1,4 +1,102 @@
 
+-- v2.5.5_20200316_2200.patch.etracs
+
+alter table account_incometarget add CONSTRAINT `fk_account_incometarget_itemid` 
+   FOREIGN KEY (`itemid`) REFERENCES `account` (`objid`)
+;
+
+
+CREATE TABLE `cashreceipt_group` ( 
+   `objid` varchar(50) NOT NULL, 
+   `txndate` datetime NOT NULL, 
+   `controlid` varchar(50) NOT NULL, 
+   `amount` decimal(16,2) NOT NULL, 
+   `totalcash` decimal(16,2) NOT NULL, 
+   `totalnoncash` decimal(16,2) NOT NULL, 
+   `cashchange` decimal(16,2) NOT NULL,
+   CONSTRAINT `pk_cashreceipt_group` PRIMARY KEY (`objid`),
+   KEY `ix_controlid` (`controlid`),
+   KEY `ix_txndate` (`txndate`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+
+
+CREATE TABLE `cashreceipt_groupitem` ( 
+   `objid` varchar(50) NOT NULL, 
+   `parentid` varchar(50) NOT NULL,
+   CONSTRAINT `pk_cashreceipt_groupitem` PRIMARY KEY (`objid`),
+   KEY `ix_parentid` (`parentid`),
+   CONSTRAINT `fk_cashreceipt_groupitem_objid` FOREIGN KEY (`objid`) REFERENCES `cashreceipt` (`objid`),
+   CONSTRAINT `fk_cashreceipt_groupitem_parentid` FOREIGN KEY (`parentid`) REFERENCES `cashreceipt_group` (`objid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+
+CREATE TABLE `cashreceipt_plugin` ( 
+   `objid` varchar(50) NOT NULL, 
+   `connection` varchar(150) NOT NULL, 
+   `servicename` varchar(255) NOT NULL,
+   CONSTRAINT `pk_cashreceipt_plugin` PRIMARY KEY (`objid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+
+create unique index uix_receiptid on cashreceipt_void (receiptid)
+; 
+
+alter table collectiontype add info text null 
+; 
+
+CREATE TABLE `entity_mapping` ( 
+   `objid` varchar(50) NOT NULL, 
+   `parent_objid` varchar(50) NOT NULL, 
+   `org_objid` varchar(50) NULL,
+   CONSTRAINT `pk_entity_mapping` PRIMARY KEY (`objid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+
+
+DROP TABLE IF EXISTS `paymentorder`
+;
+CREATE TABLE `paymentorder` (
+   `objid` varchar(50) NOT NULL, 
+   `txndate` datetime NULL, 
+   `payer_objid` varchar(50) NULL, 
+   `payer_name` text NULL, 
+   `paidby` text NULL, 
+   `paidbyaddress` varchar(150) NULL, 
+   `particulars` text NULL, 
+   `amount` decimal(16,2) NULL, 
+   `txntype` varchar(50) NULL, 
+   `expirydate` date NULL, 
+   `refid` varchar(50) NULL, 
+   `refno` varchar(50) NULL, 
+   `info` text NULL, 
+   `txntypename` varchar(255) NULL, 
+   `locationid` varchar(50) NULL, 
+   `origin` varchar(50) NULL, 
+   `issuedby_objid` varchar(50) NULL, 
+   `issuedby_name` varchar(150) NULL, 
+   `org_objid` varchar(50) NULL, 
+   `org_name` varchar(255) NULL, 
+   `items` text NULL, 
+   `collectiontypeid` varchar(50) NULL, 
+   `queueid` varchar(50) NULL,
+   CONSTRAINT `pk_paymentorder` PRIMARY KEY (`objid`),
+   KEY `ix_collectiontypeid` (`collectiontypeid`),
+   KEY `ix_issuedby_name` (`issuedby_name`),
+   KEY `ix_issuedby_objid` (`issuedby_objid`),
+   KEY `ix_locationid` (`locationid`),
+   KEY `ix_org_name` (`org_name`),
+   KEY `ix_org_objid` (`org_objid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+
+
+CREATE UNIQUE INDEX `uix_ruleset_name` ON sys_rule (`ruleset`,`name`)
+;
+
+
+
+
 -- 
 -- VIEWS
 -- 
@@ -1199,54 +1297,6 @@ from account_incometarget t
 ;
 
 
-/*
-DROP VIEW IF EXISTS vw_business_application_lob_retire
-;
-CREATE VIEW vw_business_application_lob_retire AS 
-select 
-a.business_objid AS businessid, 
-a.objid AS applicationid, 
-a.appno AS appno, 
-a.appyear AS appyear, 
-a.dtfiled AS dtfiled, 
-a.txndate AS txndate, 
-a.tradename AS tradename, 
-b.bin AS bin, 
-alob.assessmenttype AS assessmenttype, 
-alob.lobid AS lobid, 
-alob.name AS lobname, 
-a.objid AS refid, 
-a.appno AS refno  
-from business_application a 
-	inner join business_application_lob alob on alob.applicationid = a.objid 
-	inner join business b on b.objid = a.business_objid 
-where alob.assessmenttype = 'RETIRE' 
-	and a.state = 'COMPLETED' 
-	and a.parentapplicationid is null 
-union all 
-select 
-pa.business_objid AS businessid, 
-pa.objid AS applicationid, 
-pa.appno AS appno, 
-pa.appyear AS appyear, 
-pa.dtfiled AS dtfiled, 
-pa.txndate AS txndate, 
-pa.tradename AS tradename, 
-b.bin AS bin, 
-alob.assessmenttype AS assessmenttype, 
-alob.lobid AS lobid, 
-alob.name AS lobname, 
-a.objid AS refid, 
-a.appno AS refno  
-from business_application a 
-	inner join business_application pa on pa.objid = a.parentapplicationid 
-	inner join business_application_lob alob on alob.applicationid = a.objid 
-	inner join business b on b.objid = pa.business_objid 
-where alob.assessmenttype = 'RETIRE' 
-	and a.state = 'COMPLETED'
-;
-*/
-
 drop view if exists vw_entity_mapping 
 ;
 create view vw_entity_mapping as 
@@ -1289,4 +1339,1024 @@ d.title AS depositoryfund_title
 from fund f 
 	left join fundgroup g on g.objid = f.groupid 
 	left join fund d on d.objid = f.depositoryfundid
+;
+
+
+-- v2.5.5_20200421_001.patch.etracs
+
+drop view if exists vw_cashbook_cashreceipt
+; 
+CREATE VIEW vw_cashbook_cashreceipt AS 
+select  
+  c.objid AS objid, 
+  c.txndate AS txndate,
+  cast(c.receiptdate as date) AS refdate, 
+  c.objid AS refid, 
+  c.receiptno AS refno,
+  'cashreceipt' AS reftype, 
+  concat(ct.name,' (',c.paidby,')') AS particulars, 
+  ci.item_fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  ci.amount AS dr, 0.0 AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  c.txndate AS sortdate, 
+  c.receiptdate AS receiptdate, 
+  c.objid AS receiptid, 
+  c.remittanceid, 
+	r.controldate as remittancedate, 
+	r.dtposted as remittancedtposted
+from cashreceipt c 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid
+  inner join cashreceiptitem ci on ci.receiptid = c.objid
+	left join remittance r on r.objid = c.remittanceid 
+;
+
+
+drop view if exists vw_cashbook_cashreceipt_share
+; 
+CREATE VIEW vw_cashbook_cashreceipt_share AS 
+select  
+  c.objid AS objid, 
+  c.txndate AS txndate,
+  cast(c.receiptdate as date) AS refdate, 
+  c.objid AS refid, 
+  c.receiptno AS refno, 
+  'cashreceipt' AS reftype, 
+  concat(ct.name,' (',c.paidby,')') AS particulars, 
+  ia.fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  cs.amount AS dr, 0.0 AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  c.txndate AS sortdate, 
+  c.receiptdate AS receiptdate, 
+  c.objid AS receiptid, 
+  cs.refitem_objid AS refitemid, 
+  c.remittanceid, 
+  r.controldate as remittancedate, 
+  r.dtposted as remittancedtposted   
+from cashreceipt c 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.refitem_objid 
+  left join remittance r on r.objid = c.remittanceid 
+;
+
+
+drop view if exists vw_cashbook_cashreceipt_share_payable
+; 
+CREATE VIEW vw_cashbook_cashreceipt_share_payable AS 
+select  
+  c.objid AS objid, 
+  c.txndate AS txndate,
+  cast(c.receiptdate as date) AS refdate, 
+  c.objid AS refid, 
+  c.receiptno AS refno, 
+  'cashreceipt' AS reftype, 
+  concat(ct.name,' (',c.paidby,')') AS particulars, 
+  ia.fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  cs.amount AS dr, 0.0 AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  c.txndate AS sortdate, 
+  c.receiptdate AS receiptdate, 
+  c.objid AS receiptid, 
+  cs.payableitem_objid AS payableitemid, 
+  c.remittanceid, 
+  r.controldate as remittancedate, 
+  r.dtposted as remittancedtposted   
+from cashreceipt c 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.payableitem_objid  
+  left join remittance r on r.objid = c.remittanceid 
+;
+
+
+drop view if exists vw_cashbook_remittance
+;
+CREATE VIEW vw_cashbook_remittance AS 
+select  
+  r.objid AS objid, 
+  r.dtposted AS txndate, 
+  r.controldate AS refdate, 
+  r.objid AS refid, 
+  r.controlno AS refno, 
+  'remittance' AS reftype, 
+  'REMITTANCE' AS particulars, 
+  ci.item_fund_objid AS fundid, 
+  r.collector_objid AS collectorid, 
+  0.0 AS dr, ci.amount as cr, 
+  'remittance' AS formno,
+  'remittance' AS formtype,
+  NULL AS series, 
+  NULL AS controlid, 
+  r.dtposted AS sortdate, 
+  r.liquidatingofficer_objid, 
+  r.liquidatingofficer_name, 
+  v.objid as voidid, 
+  v.txndate as voiddate 
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceiptitem ci on ci.receiptid = c.objid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+drop view if exists vw_cashbook_remittance_share
+;
+CREATE VIEW vw_cashbook_remittance_share AS 
+select  
+  r.objid AS objid, 
+  r.dtposted AS txndate, 
+  r.controldate AS refdate, 
+  r.objid AS refid, 
+  r.controlno AS refno, 
+  'remittance' AS reftype, 
+  'REMITTANCE' AS particulars, 
+  ia.fund_objid AS fundid, 
+  r.collector_objid AS collectorid, 
+  0.0 AS dr, cs.amount as cr, 
+  'remittance' AS formno,
+  'remittance' AS formtype,
+  NULL AS series,
+  NULL AS controlid, 
+  r.dtposted AS sortdate, 
+  r.liquidatingofficer_objid, 
+  r.liquidatingofficer_name,   
+  v.objid as voidid, 
+  v.txndate as voiddate 
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.refitem_objid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+drop view if exists vw_cashbook_remittance_share_payable
+;
+CREATE VIEW vw_cashbook_remittance_share_payable AS 
+select  
+  r.objid AS objid, 
+  r.dtposted AS txndate, 
+  r.controldate AS refdate, 
+  r.objid AS refid, 
+  r.controlno AS refno, 
+  'remittance' AS reftype, 
+  'REMITTANCE' AS particulars, 
+  ia.fund_objid AS fundid, 
+  r.collector_objid AS collectorid, 
+  0.0 AS dr, cs.amount as cr, 
+  'remittance' AS formno,
+  'remittance' AS formtype,
+  NULL AS series,
+  NULL AS controlid, 
+  r.dtposted AS sortdate, 
+  r.liquidatingofficer_objid, 
+  r.liquidatingofficer_name,   
+  v.objid as voidid, 
+  v.txndate as voiddate 
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.payableitem_objid
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+
+drop view if exists vw_cashbook_cashreceiptvoid
+; 
+CREATE VIEW vw_cashbook_cashreceiptvoid AS 
+select  
+  v.objid AS objid, 
+  v.txndate AS txndate,
+  cast(v.txndate as date) AS refdate, 
+  v.objid AS refid, 
+  c.receiptno AS refno, 
+  'cashreceipt:void' AS reftype,
+  concat('VOID ',v.reason) AS particulars, 
+  ci.item_fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  ci.amount as dr, 
+  (
+    case 
+      when r.liquidatingofficer_objid is null then 0.0 
+      when v.txndate > r.dtposted then ci.amount 
+      else 0.0  
+    end
+  ) AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  v.txndate AS sortdate, 
+  c.receiptdate, 
+  c.remittanceid, 
+  r.controldate as remittancedate, 
+  r.dtposted as remittancedtposted 
+from cashreceipt_void v 
+  inner join cashreceipt c on c.objid = v.receiptid 
+  inner join cashreceiptitem ci on ci.receiptid = c.objid 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid 
+  left join remittance r on r.objid = c.remittanceid 
+;
+
+drop view if exists vw_cashbook_cashreceiptvoid_share
+; 
+CREATE VIEW vw_cashbook_cashreceiptvoid_share AS 
+select  
+  v.objid AS objid, 
+  v.txndate AS txndate,
+  cast(v.txndate as date) AS refdate, 
+  v.objid AS refid, 
+  c.receiptno AS refno, 
+  'cashreceipt:void' AS reftype,
+  concat('VOID ',v.reason) AS particulars, 
+  ia.fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  cs.amount as dr, 
+  (
+    case 
+      when r.liquidatingofficer_objid is null then 0.0 
+      when v.txndate > r.dtposted then cs.amount 
+      else 0.0  
+    end
+  ) AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  v.txndate AS sortdate, 
+  c.receiptdate, 
+  c.remittanceid, 
+  r.controldate as remittancedate, 
+  r.dtposted as remittancedtposted 
+from cashreceipt_void v 
+  inner join cashreceipt c on c.objid = v.receiptid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.refitem_objid 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid 
+  left join remittance r on r.objid = c.remittanceid 
+;
+
+drop view if exists vw_cashbook_cashreceiptvoid_share_payable
+; 
+CREATE VIEW vw_cashbook_cashreceiptvoid_share_payable AS 
+select  
+  v.objid AS objid, 
+  v.txndate AS txndate,
+  cast(v.txndate as date) AS refdate, 
+  v.objid AS refid, 
+  c.receiptno AS refno, 
+  'cashreceipt:void' AS reftype,
+  concat('VOID ',v.reason) AS particulars, 
+  ia.fund_objid AS fundid, 
+  c.collector_objid AS collectorid, 
+  cs.amount as dr, 
+  (
+    case 
+      when r.liquidatingofficer_objid is null then 0.0 
+      when v.txndate > r.dtposted then cs.amount 
+      else 0.0  
+    end
+  ) AS cr, 
+  c.formno AS formno, 
+  c.formtype AS formtype, 
+  c.series AS series, 
+  c.controlid AS controlid, 
+  v.txndate AS sortdate, 
+  c.receiptdate, 
+  c.remittanceid, 
+  r.controldate as remittancedate, 
+  r.dtposted as remittancedtposted 
+from cashreceipt_void v 
+  inner join cashreceipt c on c.objid = v.receiptid 
+  inner join cashreceipt_share cs on cs.receiptid = c.objid 
+  inner join itemaccount ia on ia.objid = cs.payableitem_objid 
+  inner join collectiontype ct on ct.objid = c.collectiontype_objid 
+  left join remittance r on r.objid = c.remittanceid 
+;
+
+
+-- v2.5.5_20200429_001.patch.etracs
+
+update 
+	af_control_detail aa, ( 
+		select objid, issuedstartseries, issuedendseries, qtyissued 
+		from af_control_detail d 
+		where d.reftype = 'ISSUE' and d.txntype = 'COLLECTION' 
+			and d.qtyreceived = 0 
+	)bb 
+set 
+	aa.receivedstartseries = bb.issuedstartseries, aa.receivedendseries = bb.issuedendseries, aa.qtyreceived = bb.qtyissued, 
+	aa.issuedstartseries = null, aa.issuedendseries = null, aa.qtyissued = 0 
+where aa.objid = bb.objid 
+; 
+
+update af_control_detail set receivedstartseries = null where receivedstartseries = 0 ; 
+update af_control_detail set receivedendseries = null where receivedendseries  = 0 ; 
+update af_control_detail set beginstartseries = null where beginstartseries = 0 ; 
+update af_control_detail set beginendseries = null where beginendseries = 0 ; 
+update af_control_detail set issuedstartseries = null where issuedstartseries = 0 ; 
+update af_control_detail set issuedendseries = null where issuedendseries = 0 ; 
+update af_control_detail set endingstartseries = null where endingstartseries = 0 ; 
+update af_control_detail set endingendseries = null where endingendseries = 0 ; 
+
+
+update 
+	af_control_detail aa, ( 
+		select d.objid 
+		from af_control_detail d 
+			inner join af_control a on a.objid = d.controlid 
+		where d.reftype = 'ISSUE' and d.txntype = 'COLLECTION' 
+			and d.remarks = 'SALE' 
+	)bb 
+set aa.remarks = 'COLLECTION' 
+where aa.objid = bb.objid 
+;
+
+update 
+	af_control_detail aa, ( 
+		select rd.objid, rd.receivedstartseries, rd.receivedendseries, rd.qtyreceived 
+		from ( 
+			select tt.*, (
+					select objid from af_control_detail 
+					where controlid = tt.controlid and reftype in ('ISSUE','MANUAL_ISSUE') 
+					order by refdate, txndate, indexno limit 1 
+				) as pdetailid, (
+					select objid from af_control_detail 
+					where controlid = tt.controlid and refdate = tt.refdate 
+						and reftype = tt.reftype and txntype = tt.txntype and qtyreceived > 0 
+					order by refdate, txndate, indexno limit 1 
+				) as cdetailid 
+			from ( 
+				select d.controlid, d.reftype, d.txntype, min(d.refdate) as refdate  
+				from af_control_detail d 
+				where d.reftype = 'remittance' and d.txntype = 'remittance' 
+				group by d.controlid, d.reftype, d.txntype 
+			)tt 
+		)tt 
+			inner join af_control_detail rd on rd.objid = tt.cdetailid 
+			inner join af_control_detail pd on pd.objid = tt.pdetailid 
+		where pd.refdate <> rd.refdate 
+	)bb 
+set 
+	aa.beginstartseries = bb.receivedstartseries, aa.beginendseries = bb.receivedendseries, aa.qtybegin = bb.qtyreceived, 
+	aa.receivedstartseries = null, aa.receivedendseries = null, aa.qtyreceived = 0 
+where aa.objid = bb.objid 
+;
+
+
+-- v2.5.5_20200501_001.patch.etracs
+
+
+INSERT INTO sys_var (name, value, description, datatype, category) 
+VALUES ('liquidation_report_show_accountable_forms', '0', 'Show Accoutable Forms in RCD Liquidation Report ', NULL, 'TC')
+;
+
+
+-- v2.5.5_20200504_001.patch.etracs
+
+update 
+	af_control_detail aa, (
+		select t2.*, (select min(receiptdate) from cashreceipt where controlid = t2.controlid) as receiptdate 
+		from ( 
+			select t1.* 
+			from ( 
+				select d.controlid, d.refdate, d.reftype, d.refid, d.objid as cdetailid, 
+					(select objid from af_control_detail where controlid = d.controlid order by refdate, txndate, indexno limit 1) as firstdetailid 
+				from aftxn aft 
+					inner join aftxnitem afi on afi.parentid = aft.objid 
+					inner join af_control_detail d on d.aftxnitemid = afi.objid 
+				where aft.txntype = 'FORWARD' 
+			)t1, af_control_detail d 
+			where d.objid = t1.firstdetailid 
+				and d.objid <> t1.cdetailid 
+		)t2 
+	)bb 
+set aa.refdate = bb.receiptdate 
+where aa.objid = bb.cdetailid 
+	and bb.receiptdate is not null 
+; 
+
+
+-- v2.5.5_20200505_001.patch.etracs
+
+alter table creditmemo change payername _payername varchar(255) null
+;
+alter table creditmemo add payer_name varchar(255) null
+;
+update creditmemo set payer_name = _payername where payer_name is null 
+; 
+alter table creditmemo modify payer_name varchar(255) not null
+;
+create index ix_payer_name on creditmemo (payer_name)
+;
+
+alter table creditmemo add payer_address_objid varchar(50) null
+;
+create index ix_payer_address_objid on creditmemo (payer_address_objid)
+; 
+
+alter table creditmemo change payeraddress _payeraddress varchar(255) null 
+;
+alter table creditmemo add payer_address_text varchar(255) null 
+;
+update creditmemo set payer_address_text = _payeraddress where payer_address_text is null 
+;
+
+
+-- v2.5.5_20200515_001.patch.etracs
+
+drop view if exists vw_remittance_cashreceiptitem
+;
+create view vw_remittance_cashreceiptitem AS 
+select 
+  c.remittanceid AS remittanceid, 
+  r.controldate AS remittance_controldate, 
+  r.controlno AS remittance_controlno, 
+  r.collectionvoucherid AS collectionvoucherid, 
+  c.collectiontype_objid AS collectiontype_objid, 
+  c.collectiontype_name AS collectiontype_name, 
+  c.org_objid AS org_objid, 
+  c.org_name AS org_name, 
+  c.formtype AS formtype, 
+  c.formno AS formno, 
+  (case when (c.formtype = 'serial') then 0 else 1 end) AS formtypeindex, 
+  cri.receiptid AS receiptid, 
+  c.receiptdate AS receiptdate, 
+  c.receiptno AS receiptno, 
+  c.controlid as controlid, 
+  c.series as series, 
+  c.paidby AS paidby, 
+  c.paidbyaddress AS paidbyaddress, 
+  c.collector_objid AS collectorid, 
+  c.collector_name AS collectorname, 
+  c.collector_title AS collectortitle, 
+  cri.item_fund_objid AS fundid, 
+  cri.item_objid AS acctid, 
+  cri.item_code AS acctcode, 
+  cri.item_title AS acctname, 
+  cri.remarks AS remarks, 
+  (case when v.objid is null then cri.amount else 0.0 end) AS amount, 
+  (case when v.objid is null then 0 else 1 end) AS voided, 
+  (case when v.objid is null then 0.0 else cri.amount end) AS voidamount  
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceiptitem cri on cri.receiptid = c.objid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+
+drop view if exists vw_collectionvoucher_cashreceiptitem
+;
+create view vw_collectionvoucher_cashreceiptitem AS 
+select 
+  cv.controldate AS collectionvoucher_controldate, 
+  cv.controlno AS collectionvoucher_controlno, 
+  v.remittanceid AS remittanceid, 
+  v.remittance_controldate AS remittance_controldate, 
+  v.remittance_controlno AS remittance_controlno, 
+  v.collectionvoucherid AS collectionvoucherid, 
+  v.collectiontype_objid AS collectiontype_objid, 
+  v.collectiontype_name AS collectiontype_name, 
+  v.org_objid AS org_objid, 
+  v.org_name AS org_name, 
+  v.formtype AS formtype, 
+  v.formno AS formno, 
+  v.formtypeindex AS formtypeindex, 
+  v.receiptid AS receiptid, 
+  v.receiptdate AS receiptdate, 
+  v.receiptno AS receiptno, 
+  v.controlid as controlid,
+  v.series as series,
+  v.paidby AS paidby, 
+  v.paidbyaddress AS paidbyaddress, 
+  v.collectorid AS collectorid, 
+  v.collectorname AS collectorname, 
+  v.collectortitle AS collectortitle, 
+  v.fundid AS fundid, 
+  v.acctid AS acctid, 
+  v.acctcode AS acctcode, 
+  v.acctname AS acctname, 
+  v.amount AS amount, 
+  v.voided AS voided, 
+  v.voidamount AS voidamount, 
+  v.remarks as remarks 
+from collectionvoucher cv 
+  inner join vw_remittance_cashreceiptitem v on v.collectionvoucherid = cv.objid 
+;
+
+
+-- v2.5.5_20200604_001.patch.etracs
+
+
+alter table bank add _ukey varchar(50) not null default ''
+;
+create index ix__ukey on bank (_ukey)
+;
+update bank set _ukey=objid where _ukey=''
+;
+create unique index uix_code_branchname on bank (code, branchname, _ukey)
+;
+
+create table ztmpdev_bank  
+select 
+  bankid as objid, null as state, bank_name as name, 
+  case 
+    when bank_name like 'banc%de%oro%' then 'BDO' 
+    when bank_name like 'bank%phil%island%' then 'BPI' 
+    when bank_name like 'china%bank%' then 'CB' 
+    when bank_name like 'security%bank%' then 'SB' 
+    when bank_name like 'union%bank%' then 'UB' 
+    else '' 
+  end as code, 
+  '' as branchname, '' as address, 'local' as deposittype, 0 as depository 
+from ( 
+  select distinct cp.bankid, cp.bank_name
+  from checkpayment cp 
+    left join bank on bank.objid = cp.bankid 
+  where cp.depositvoucherid is null
+    and bank.objid is null 
+  order by cp.bank_name 
+)t1 
+;
+alter table ztmpdev_bank add finalbankid varchar(50) null 
+;
+alter table ztmpdev_bank add finalbankname varchar(255) null 
+;
+alter table ztmpdev_bank add finalbankcode varchar(50) null 
+;
+update ztmpdev_bank set finalbankcode = concat(code,'-') where finalbankcode is null 
+;
+update 
+  ztmpdev_bank aa, ( 
+    select t1.*, (select objid from  ztmpdev_bank where finalbankcode = t1.finalbankcode order by name limit 1) as finalbankid 
+    from ( select distinct finalbankcode from ztmpdev_bank )t1 
+  )bb 
+set aa.finalbankid = bb.finalbankid 
+where aa.finalbankcode = bb.finalbankcode 
+;
+update 
+  ztmpdev_bank aa, ( 
+    select distinct a.finalbankid, 
+      (select name from ztmpdev_bank where objid = a.finalbankid limit 1) as finalbankname 
+    from ztmpdev_bank a 
+  )bb 
+set aa.finalbankname = bb.finalbankname 
+where aa.finalbankid = bb.finalbankid 
+;
+insert into bank (
+  objid, state, name, code, branchname, address, deposittype, depository 
+) 
+select 
+  z.objid, z.state, z.name, z.finalbankcode, z.branchname, z.address, z.deposittype, z.depository 
+from ( select distinct finalbankid from ztmpdev_bank )t1 
+  inner join ztmpdev_bank z on z.objid = t1.finalbankid 
+;
+update checkpayment aa,  ztmpdev_bank bb 
+set aa.bankid = bb.finalbankid 
+where aa.bankid = bb.objid 
+;
+
+alter table checkpayment add constraint fk_checkpayment_bankid 
+  foreign key (bankid) references bank (objid) 
+; 
+
+drop table ztmpdev_bank
+;
+
+
+
+-- v2.5.5_20200606_001.patch.etracs
+
+
+alter table aftxn add lockid varchar(50) null 
+; 
+
+/* 
+alter table af_control add constraint fk_af_control_afid 
+	foreign key (afid) references af (objid) 
+; 
+*/
+
+alter table af_control add constraint fk_af_control_allocid 
+	foreign key (allocid) references af_allocation (objid) 
+; 
+
+drop view if exists vw_af_inventory_summary
+;
+CREATE VIEW vw_af_inventory_summary AS 
+select 
+	af.objid, af.title, u.unit, af.formtype, 
+	(case when af.formtype='serial' then 0 else 1 end) as formtypeindex, 
+	(select count(0) from af_control where afid = af.objid and state = 'OPEN') AS countopen, 
+	(select count(0) from af_control where afid = af.objid and state = 'ISSUED') AS countissued, 
+	(select count(0) from af_control where afid = af.objid and state = 'ISSUED' and currentseries > endseries) AS countclosed, 
+	(select count(0) from af_control where afid = af.objid and state = 'SOLD') AS countsold, 
+	(select count(0) from af_control where afid = af.objid and state = 'PROCESSING') AS countprocessing, 
+	(select count(0) from af_control where afid = af.objid and state = 'HOLD') AS counthold
+from af, afunit u 
+where af.objid = u.itemid
+order by (case when af.formtype='serial' then 0 else 1 end), af.objid 
+;
+
+alter table af_control add salecost decimal(16,2) not null default '0.0'
+;
+
+-- update af_control set salecost = cost where state = 'SOLD' and cost > 0 and salecost = 0 
+-- ; 
+
+
+insert into sys_usergroup (
+	objid, title, domain, role, userclass
+) values (
+	'TREASURY.AFO_ADMIN', 'TREASURY AFO ADMIN', 'TREASURY', 'AFO_ADMIN', 'usergroup' 
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'TREASURY-AFO-ADMIN-aftxn-changetxntype', 'TREASURY.AFO_ADMIN', 'aftxn', 'changeTxnType', 'Change Txn Type'
+); 
+
+
+
+-- v2.5.5_20200609_001.patch.etracs
+
+insert into sys_usergroup (
+	objid, title, domain, role, userclass
+) values (
+	'TREASURY.COLLECTOR_ADMIN', 'TREASURY COLLECTOR ADMIN', 'TREASURY', 'COLLECTOR_ADMIN', 'usergroup' 
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'TREASURY-COLLECTOR-ADMIN-aftxn-changetxntype', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'rebuildFund', 'Rebuild Remittance Fund'
+); 
+
+
+-- v255_20200610_001.patch.etracs
+
+update af_control_detail set reftype = 'ISSUE' where txntype='SALE' and reftype <> 'ISSUE' 
+; 
+
+update 
+	af_control_detail aa, ( 
+		select 
+			(select count(*) from cashreceipt where controlid = d.controlid) as receiptcount, 
+			d.objid, d.controlid, d.endingstartseries, d.endingendseries, d.qtyending 
+		from af_control_detail d 
+		where d.txntype='SALE' 
+			and d.qtyending > 0
+	)bb 
+set 
+	aa.issuedstartseries = bb.endingstartseries, aa.issuedendseries = bb.endingendseries, aa.qtyissued = bb.qtyending, 
+	aa.endingstartseries = null, aa.endingendseries = null, aa.qtyending = 0 
+where aa.objid = bb.objid 
+	and bb.receiptcount = 0 
+;
+
+update 
+	af_control_detail aa, ( 
+		select 
+			(select count(*) from cashreceipt where controlid = d.controlid) as receiptcount, 
+			d.objid, d.controlid, d.endingstartseries, d.endingendseries, d.qtyending 
+		from af_control_detail d 
+		where d.txntype='SALE' 
+			and d.qtyending > 0
+	)bb 
+set 
+	aa.reftype = 'ISSUE', aa.txntype = 'COLLECTION', aa.remarks = 'COLLECTION' 
+where aa.objid = bb.objid 
+	and bb.receiptcount > 0 
+;
+
+alter table sys_usergroup_permission modify objid varchar(100) not null 
+; 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'TREASURY-COLLECTOR-ADMIN-remittance-modifyCashBreakdown', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'modifyCashBreakdown', 'Modify Remittance Cash Breakdown'
+); 
+
+
+
+-- v255_20200611_001.patch.etracs
+
+update 
+	af_control_detail aa, ( 
+		select objid, issuedstartseries, issuedendseries, qtyissued 
+		from af_control_detail 
+		where txntype='sale' 
+			and qtyissued > 0 
+	) bb  
+set 
+	aa.receivedstartseries = bb.issuedstartseries, aa.receivedendseries = bb.issuedendseries, aa.qtyreceived = bb.qtyissued, 
+	aa.beginstartseries = null, aa.beginendseries = null, aa.qtybegin = 0 
+where aa.objid = bb.objid 
+; 
+
+
+update 
+	af_control aa, ( 
+		select a.objid 
+		from af_control a 
+		where a.objid not in (
+			select distinct controlid from af_control_detail where controlid = a.objid
+		) 
+	)bb 
+set aa.currentdetailid = null, aa.currentindexno = 0 
+where aa.objid = bb.objid 
+; 
+
+
+update 
+	af_control aa, ( 
+		select d.controlid 
+		from af_control_detail d, af_control a 
+		where d.txntype = 'SALE' 
+			and d.controlid = a.objid 
+			and a.currentseries <= a.endseries 
+	)bb 
+set aa.currentseries = aa.endseries+1 
+where aa.objid = bb.controlid 
+; 
+
+
+update af_control set 
+	currentindexno = (select indexno from af_control_detail where objid = af_control.currentdetailid)
+where currentdetailid is not null 
+; 
+
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'TREASURY-COLLECTOR-ADMIN-remittance-voidReceipt', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'voidReceipt', 'Void Receipt'
+); 
+
+
+
+-- v255_20200612_001.patch.etracs
+
+insert into sys_usergroup (
+	objid, title, domain, role, userclass
+) values (
+	'TREASURY.LIQ_OFFICER_ADMIN', 'TREASURY LIQ. OFFICER ADMIN', 
+	'TREASURY', 'LIQ_OFFICER_ADMIN', 'usergroup' 
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'UGP-d2bb69a6769517e0c8e672fec41f5fd7', 'TREASURY.LIQ_OFFICER_ADMIN', 
+	'collectionvoucher', 'changeLiqOfficer', 'Change Liquidating Officer'
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'UGP-3219ec222220f68d1f69d4d1d76021e0', 'TREASURY.LIQ_OFFICER_ADMIN', 
+	'collectionvoucher', 'modifyCashBreakdown', 'Modify Cash Breakdown'
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'UGP-4e508bdd04888894926f677bbc0be374', 'TREASURY.LIQ_OFFICER_ADMIN', 
+	'collectionvoucher', 'rebuildFund', 'Rebuild Fund Summary'
+); 
+
+insert into sys_usergroup_permission (
+	objid, usergroup_objid, object, permission, title 
+) values ( 
+	'UGP-cf543fabc2aca483c6e5d3d48c39c4cc', 'TREASURY.LIQ_OFFICER_ADMIN', 
+	'incomesummary', 'rebuild', 'Rebuild Income Summary'
+); 
+
+
+
+-- v2.5.5_20200813_001.patch.etracs
+
+INSERT INTO `sys_rule_fact` (`objid`, `name`, `title`, `factclass`, `sortorder`, `handler`, `defaultvarname`, `dynamic`, `lookuphandler`, `lookupkey`, `lookupvalue`, `lookupdatatype`, `dynamicfieldname`, `builtinconstraints`, `domain`, `factsuperclass`) 
+VALUES ('treasury.facts.VarString', 'treasury.facts.VarString', 'Var String', 'treasury.facts.VarString', '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'TREASURY', NULL);
+
+INSERT INTO `sys_rule_fact_field` (`objid`, `parentid`, `name`, `title`, `datatype`, `sortorder`, `handler`, `lookuphandler`, `lookupkey`, `lookupvalue`, `lookupdatatype`, `multivalued`, `required`, `vardatatype`, `lovname`) 
+VALUES ('treasury.facts.VarString.tag', 'treasury.facts.VarString', 'tag', 'Tag', 'string', '1', 'string', NULL, NULL, NULL, NULL, NULL, NULL, 'string', NULL);
+
+INSERT INTO `sys_rule_fact_field` (`objid`, `parentid`, `name`, `title`, `datatype`, `sortorder`, `handler`, `lookuphandler`, `lookupkey`, `lookupvalue`, `lookupdatatype`, `multivalued`, `required`, `vardatatype`, `lovname`) 
+VALUES ('treasury.facts.VarString.value', 'treasury.facts.VarString', 'value', 'Value', 'string', '2', 'string', NULL, NULL, NULL, NULL, NULL, NULL, 'string', NULL);
+
+INSERT INTO `sys_ruleset_fact` (`ruleset`, `rulefact`) 
+VALUES ('revenuesharing', 'treasury.facts.VarString');
+
+
+-- v2.5.5_20201013_001.upgrade
+
+update cashreceipt_plugin set `connection` = objid 
+; 
+
+
+-- v255_20201106_001.patch
+
+create table sys_email_queue (
+	`objid` varchar(50) not null, 
+	`refid` varchar(50) not null, 
+	`state` int not null, 
+	`reportid` varchar(50) null, 
+	`dtsent` datetime not null, 
+	`to` varchar(255) not null, 
+	`subject` varchar(255) not null, 
+	`message` text not null, 
+	`errmsg` longtext null, 
+	constraint pk_sys_email_queue primary key (objid) 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+; 
+create index ix_refid on sys_email_queue (refid); 
+create index ix_state on sys_email_queue (state); 
+create index ix_reportid on sys_email_queue (reportid); 
+create index ix_dtsent on sys_email_queue (dtsent); 
+
+
+alter table sys_email_queue add connection varchar(50) null ;
+
+
+
+-- v255_20210105.patch
+
+drop view if exists vw_remittance_cashreceiptitem
+;
+create view vw_remittance_cashreceiptitem AS 
+select 
+  c.remittanceid AS remittanceid, 
+  r.controldate AS remittance_controldate, 
+  r.controlno AS remittance_controlno, 
+  r.collectionvoucherid AS collectionvoucherid, 
+  c.collectiontype_objid AS collectiontype_objid, 
+  c.collectiontype_name AS collectiontype_name, 
+  c.org_objid AS org_objid, 
+  c.org_name AS org_name, 
+  c.formtype AS formtype, 
+  c.formno AS formno, 
+  cri.receiptid AS receiptid, 
+  c.receiptdate AS receiptdate, 
+  c.receiptno AS receiptno, 
+  c.controlid as controlid, 
+  c.series as series, 
+  c.stub as stubno, 
+  c.paidby AS paidby, 
+  c.paidbyaddress AS paidbyaddress, 
+  c.collector_objid AS collectorid, 
+  c.collector_name AS collectorname, 
+  c.collector_title AS collectortitle, 
+  cri.item_fund_objid AS fundid, 
+  cri.item_objid AS acctid, 
+  cri.item_code AS acctcode, 
+  cri.item_title AS acctname, 
+  cri.remarks AS remarks, 
+  (case when v.objid is null then cri.amount else 0.0 end) AS amount, 
+  (case when v.objid is null then 0 else 1 end) AS voided, 
+  (case when v.objid is null then 0.0 else cri.amount end) AS voidamount,   
+  (case when (c.formtype = 'serial') then 0 else 1 end) AS formtypeindex
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceiptitem cri on cri.receiptid = c.objid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+
+drop view if exists vw_collectionvoucher_cashreceiptitem
+;
+create view vw_collectionvoucher_cashreceiptitem AS 
+select 
+  cv.controldate AS collectionvoucher_controldate, 
+  cv.controlno AS collectionvoucher_controlno, 
+  v.*  
+from collectionvoucher cv 
+  inner join vw_remittance_cashreceiptitem v on v.collectionvoucherid = cv.objid 
+;
+
+
+
+drop view if exists vw_remittance_cashreceiptshare
+;
+create view vw_remittance_cashreceiptshare AS 
+select 
+	c.remittanceid AS remittanceid, 
+	r.controldate AS remittance_controldate, 
+	r.controlno AS remittance_controlno, 
+	r.collectionvoucherid AS collectionvoucherid, 
+	c.formno AS formno, 
+	c.formtype AS formtype, 
+  c.controlid as controlid, 
+	cs.receiptid AS receiptid, 
+	c.receiptdate AS receiptdate, 
+	c.receiptno AS receiptno, 
+	c.paidby AS paidby, 
+	c.paidbyaddress AS paidbyaddress, 
+	c.org_objid AS org_objid, 
+	c.org_name AS org_name, 
+	c.collectiontype_objid AS collectiontype_objid, 
+	c.collectiontype_name AS collectiontype_name, 
+	c.collector_objid AS collectorid, 
+	c.collector_name AS collectorname, 
+	c.collector_title AS collectortitle, 
+	cs.refitem_objid AS refacctid, 
+	ia.fund_objid AS fundid, 
+	ia.objid AS acctid, 
+	ia.code AS acctcode, 
+	ia.title AS acctname, 
+	(case when v.objid is null then cs.amount else 0.0 end) AS amount, 
+	(case when v.objid is null then 0 else 1 end) AS voided, 
+	(case when v.objid is null then 0.0 else cs.amount end) AS voidamount, 
+	(case when (c.formtype = 'serial') then 0 else 1 end) AS formtypeindex  
+from remittance r 
+	inner join cashreceipt c on c.remittanceid = r.objid 
+	inner join cashreceipt_share cs on cs.receiptid = c.objid 
+	inner join itemaccount ia on ia.objid = cs.payableitem_objid 
+	left join cashreceipt_void v on v.receiptid = c.objid 
+; 
+
+
+drop view if exists vw_collectionvoucher_cashreceiptshare
+;
+create view vw_collectionvoucher_cashreceiptshare AS 
+select 
+  cv.controldate AS collectionvoucher_controldate, 
+  cv.controlno AS collectionvoucher_controlno, 
+  v.* 
+from collectionvoucher cv 
+  inner join vw_remittance_cashreceiptshare v on v.collectionvoucherid = cv.objid 
+; 
+
+
+
+drop view if exists vw_remittance_cashreceiptpayment_noncash
+; 
+create view vw_remittance_cashreceiptpayment_noncash AS 
+select 
+  nc.objid AS objid, 
+  nc.receiptid AS receiptid, 
+  nc.refno AS refno, 
+  nc.refdate AS refdate, 
+  nc.reftype AS reftype, 
+  nc.particulars AS particulars, 
+  nc.fund_objid as fundid, 
+  nc.refid AS refid, 
+  nc.amount AS amount, 
+  (case when v.objid is null then 0 else 1 end) AS voided, 
+  (case when v.objid is null then 0.0 else nc.amount end) AS voidamount, 
+  cp.bankid AS bankid, 
+  cp.bank_name AS bank_name, 
+  c.remittanceid AS remittanceid, 
+  r.collectionvoucherid AS collectionvoucherid  
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceiptpayment_noncash nc on (nc.receiptid = c.objid and nc.reftype = 'CHECK') 
+  inner join checkpayment cp on cp.objid = nc.refid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+union all 
+select 
+  nc.objid AS objid, 
+  nc.receiptid AS receiptid, 
+  nc.refno AS refno, 
+  nc.refdate AS refdate, 
+  'EFT' AS reftype, 
+  nc.particulars AS particulars, 
+  nc.fund_objid as fundid, 
+  nc.refid AS refid, 
+  nc.amount AS amount, 
+  (case when v.objid is null then 0 else 1 end) AS voided, 
+  (case when v.objid is null then 0.0 else nc.amount end) AS voidamount, 
+  ba.bank_objid AS bankid, 
+  ba.bank_name AS bank_name, 
+  c.remittanceid AS remittanceid, 
+  r.collectionvoucherid AS collectionvoucherid  
+from remittance r 
+  inner join cashreceipt c on c.remittanceid = r.objid 
+  inner join cashreceiptpayment_noncash nc on (nc.receiptid = c.objid and nc.reftype = 'EFT') 
+  inner join eftpayment eft on eft.objid = nc.refid 
+  inner join bankaccount ba on ba.objid = eft.bankacctid 
+  left join cashreceipt_void v on v.receiptid = c.objid 
+;
+
+
+
+-- v255_20210108.patch
+
+CREATE TABLE `sys_domain` (
+  `name` varchar(50) NOT NULL,
+  `connection` varchar(50) NOT NULL,
+  constraint pk_sys_domain PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ;

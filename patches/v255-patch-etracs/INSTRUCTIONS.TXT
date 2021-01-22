@@ -1,0 +1,30 @@
+============
+REQUIREMENTS
+============
+
+Java 1.8 must be installed on the workstations. 
+Lower versions of Java will no longer work.
+
+
+You may download Java 8 from the following links below: 
+
+(x64) https://drive.google.com/file/d/1mdofKF8vMWPpGVgI_gzx0petjM_eC3wA/view?usp=sharing
+(x32) https://drive.google.com/file/d/12YTrfCw0rEmLpoXq5wptpi3BhcIT0Ynm/view?usp=sharing
+
+Portable Java 8 links: 
+
+(x64) https://drive.google.com/file/d/1eWKqMON8GnwShtt6XacFRQ4WM-coC9lw/view?usp=sharing
+(x32) https://drive.google.com/file/d/1RLDa21mSb7WEBQyNI5-62rDLANHMIMb9/view?usp=sharing
+
+These portable apps will only be used if EXE files installer do not worked.
+
+
+
+============
+DB UPGRADE 
+============
+Connect to ETRACS main database and run the following scripts: 
+
+- {ETRACS-SERVER-DIR}/patches/v255-patch-etracs/01-patch-etracs.sql 
+
+
