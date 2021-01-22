@@ -15,7 +15,7 @@ cd ..
 rem This will be the base directory
 set BASE_DIR=%cd%
 
-set JAVA_OPTS="-Xmx4096m -Dosiris.run.dir=%RUN_DIR% -Dosiris.base.dir=%BASE_DIR%"
+set JAVA_OPTS="-Xms512m -Xmx4096m -Dosiris.run.dir=%RUN_DIR% -Dosiris.base.dir=%BASE_DIR%"
 
 
 echo.

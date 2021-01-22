@@ -1,5 +1,5 @@
 dialect=mysql
 driverClass=com.mysql.jdbc.Driver
-url=jdbc:mysql://localhost/catanduanes_etracs25_image
-user=root
-pwd=1234
+url=jdbc:mysql://${db_server_host}/${db_image}
+user=${db_server_user}
+pwd=${db_server_pass}

@@ -5,6 +5,7 @@
 .shutdown_pid
 _custom
 Thumbs.db
+/bin/env.conf
 /client
 *.lnk
 *.exe
