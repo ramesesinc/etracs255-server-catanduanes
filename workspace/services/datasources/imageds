@@ -1,0 +1,5 @@
+dialect=mysql
+driverClass=com.mysql.jdbc.Driver
+url=jdbc:mysql://localhost/catanduanes_etracs25_image
+user=root
+pwd=1234
