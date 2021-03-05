@@ -1,1 +1,1 @@
-default=file:///${osiris.base.dir}/workspace/web/etracs
+default=file:///${osiris.base.dir}/web/etracs
