@@ -1,5 +1,11 @@
 @echo off
-
+setlocal enableDelayedExpansion
+if exist env.conf (
+	for /f "delims=" %%x in (env.conf) do (
+		set str=%%x
+		if not "!str:~0,1!" == "#" set "%%x" 
+	) 
+) 
 
 rem Specify the java home directory 
 rem set JAVA_HOME=@javahome
@@ -7,6 +13,7 @@ rem set JAVA_HOME=@javahome
 rem build the java command 
 set JAVA=java
 if not "%JAVA_HOME%" == "" set JAVA=%JAVA_HOME%\bin\java
+if not "%JAVA8_HOME%" == "" set JAVA=%JAVA8_HOME%\bin\java
 
 rem This will be the run directory
 set RUN_DIR=%cd%
@@ -24,11 +31,11 @@ echo.
 echo   Osiris3 Server (ETRACS) 
 echo.
 echo   JAVA        : %JAVA%
-echo   JAVA_HOME   : %JAVA_HOME%
 echo   JAVA_OPTS   : %JAVA_OPTS%
 echo.
 echo.========================================================================
 echo.
 
 "%JAVA%" "%JAVA_OPTS%" -cp lib/*;. com.rameses.main.bootloader.MainBootLoader
+endlocal
 pause

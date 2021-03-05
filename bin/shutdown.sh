@@ -3,14 +3,14 @@
 RUN_DIR=`pwd`
 # Move up to the parent directory
 cd ..
-# This will the base directory
+# This will be the base directory
 BASE_DIR=`pwd`
 
 # set the java home if neccessary
 # JAVA_HOME=
 
 # set java options
-JAVA_OPTS="-Dosiris.run.dir=$RUN_DIR -Dosiris.base.dir=$BASE_DIR" 
+JAVA_OPTS="-Dosiris.run.dir=$RUN_DIR -Dosiris.base.dir=$BASE_DIR"
 
 # run java
 if [ "x$JAVA_HOME" = "x" ]; then
