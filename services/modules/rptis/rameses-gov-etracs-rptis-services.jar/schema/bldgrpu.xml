@@ -10,6 +10,7 @@
 		<field name="bldgtype_objid" />
 		<field name="bldgkindbucc_objid" />
 		<field name="basevalue" type="decimal" />
+		<field name="dtconstructed" />
 		<field name="dtcompleted" />
 		<field name="dtoccupied" />
 		<field name="floorcount" required="true" type="integer" />
@@ -28,6 +29,7 @@
 		<field name="condocerttitle" />
 		<field name="dtcertcompletion" />
 		<field name="dtcertoccupancy" />
+		<field name="occpermitno" />
 		<field name="cdurating" />
 	</element>
 

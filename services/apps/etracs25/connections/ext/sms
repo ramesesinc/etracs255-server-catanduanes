@@ -1,7 +1,5 @@
 provider=script
-app.host=${sms-server}:8170
-app.context=sms
+app.host=${sms_server_ip}:8571
 app.cluster=osiris3
-
-env.acctname=${sms_acctname}
-env.apikey=${sms_apikey}
+app.context=gdx
+readTimeout=60000
